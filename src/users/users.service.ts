@@ -9,6 +9,7 @@ export class UsersService {
   });
 
   getUsers(clinic: string, token: string) {
+    console.log(`🔥🔥🔥 GATEWAY CALLING MICROSERVICE 🔥🔥🔥`);
     const data = this.client.send('clinic_get_users', { clinic, token });
     // console.log(data);
     return data;

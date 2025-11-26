@@ -1,15 +1,20 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { Resolver, Query, Args } from '@nestjs/graphql';
+import { Resolver, Query, Args, Context } from '@nestjs/graphql';
 import { UsersService } from './users.service';
 import { UserType } from './dto/user.type';
 import { lastValueFrom } from 'rxjs';
 import type { ClinicUserType } from './interfaces/clinic-user.interface';
+import { AuthGuard } from '../auth/auth-guard';
+import { UseGuards } from '@nestjs/common';
 
 function toSafeDate(value: any): Date | null {
   if (!value || value === 'null' || value === 'undefined') return null;
   const d = new Date(value);
   return isNaN(d.getTime()) ? null : d;
+}
+interface GqlContext {
+  token?: string;
+  user?: unknown;
 }
 
 @Resolver(() => UserType)
@@ -17,7 +22,13 @@ export class UsersResolver {
   constructor(private readonly usersService: UsersService) {}
 
   @Query(() => [UserType])
-  async users(@Args('clinic') clinic: string, @Args('token') token: string) {
+  @UseGuards(AuthGuard)
+  async users(
+    @Args('clinic') clinic: string,
+    @Args('token') token: string,
+    @Context() ctx: GqlContext,
+  ) {
+    ctx.token = token;
     const users: ClinicUserType[] = await lastValueFrom(
       this.usersService.getUsers(clinic, token),
     );
