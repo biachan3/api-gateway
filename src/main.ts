@@ -1,11 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import type { Request, Response, NextFunction } from 'express';
+// import { GraphqlResponseInterceptor } from './common/interceptor/graphql-response.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // 🚀 Middleware untuk memperbaiki Apollo Sandbox “empty query error”
+  // 🚀 Middleware untuk memperbaiki Apollo Sandbox "empty query error"
   app.use('/graphql', (req: Request, _res: Response, next: NextFunction) => {
     const rawBody: unknown = req.body;
     let body: Record<string, unknown> = {};
@@ -25,6 +26,6 @@ async function bootstrap() {
     next();
   });
 
-  await app.listen(process.env.PORT ?? 4000);
+  await app.listen(process.env.PORT ?? 4009);
 }
 bootstrap();
