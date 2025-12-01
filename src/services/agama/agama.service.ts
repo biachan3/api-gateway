@@ -8,16 +8,62 @@ import { mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 // import { AgamaType } from './dto/agama_type';
 import { AgamaFieldsInput } from './dto/agama_fields_type';
-
+import { ExcelHelper } from '../../common/helpers/excel.helper';
+import { AgamaFilterInput } from './dto/agama_filter_type';
 @Injectable()
 export class AgamaService {
   constructor(private multi: MultiConnectionService) {}
 
-  async semua(clinic: string): Promise<AgamaEntity[]> {
+  async semua(
+    clinic: string,
+    page?: number,
+    limit?: number,
+    filter?: AgamaFilterInput,
+  ): Promise<AgamaEntity[]> {
     const db = await this.multi.getConnection(clinic);
-    return db.query(
-      `SELECT * FROM agama WHERE deleted_at IS NULL order by id asc `,
-    );
+    const state: { responses?: boolean } = {};
+    let where = `WHERE deleted_at IS NULL`;
+    const params: any[] = [];
+
+    if (!state.responses) {
+      let index = 1;
+
+      if (filter) {
+        if (filter.id) {
+          where += ` AND id = $${index++}`;
+          params.push(filter.id);
+        }
+
+        if (filter.nama_agama) {
+          where += ` AND nama_agama ILIKE $${index++}`;
+          params.push(`%${filter.nama_agama}%`);
+        }
+
+        if (filter.created_from) {
+          where += ` AND created_at >= $${index++}`;
+          params.push(filter.created_from);
+        }
+
+        if (filter.created_to) {
+          where += ` AND created_at <= $${index++}`;
+          params.push(filter.created_to);
+        }
+      }
+    }
+
+    let sql = ``;
+    if (!state.responses) {
+      sql = `
+              SELECT * FROM agama
+              ${where}
+              ORDER BY id ASC
+            `;
+      if (limit && limit > 0) {
+        const offset = ((page ?? 1) - 1) * limit;
+        sql += ` LIMIT ${limit} OFFSET ${offset}`;
+      }
+    }
+    return db.query(sql, params);
   }
 
   async buat(clinic: string, nama_agama: string) {
@@ -28,7 +74,6 @@ export class AgamaService {
       const agama = repo.create({ nama_agama });
       return await repo.save(agama);
     } catch (err: unknown) {
-      // fallback error lain
       throw PgErrorHandler.handle(err);
     }
   }
@@ -45,7 +90,7 @@ export class AgamaService {
           .then((res) => {
             console.log(res);
           })
-          .catch((err) => {
+          .catch((err: unknown) => {
             throw PgErrorHandler.handle(err);
           });
       } else {
@@ -74,56 +119,78 @@ export class AgamaService {
     clinic: string,
     selectedFields: AgamaFieldsInput,
   ): Promise<string> {
-    const state: { responses?: string } = {};
-    let list: AgamaEntity[] = [];
-    if (!state.responses) {
-      list = await this.semua(clinic);
+    const state: { responses?: boolean } = {};
+
+    try {
+      let list: AgamaEntity[] = [];
+      if (!state.responses) {
+        await this.semua(clinic)
+          .then((res) => {
+            list = res;
+          })
+          .catch((err) => {
+            state.responses = true;
+            throw PgErrorHandler.handle(err);
+          });
+      }
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet('Master Agama');
+      if (!state.responses) {
+        console.log(`masuk sini`);
+        // Field yang bisa diexport
+        const allowedFields = [
+          'id',
+          'nama_agama',
+          'created_at',
+          'updated_at',
+          'deleted_at',
+        ] as const;
+
+        type AgamaField = (typeof allowedFields)[number];
+
+        const finalFields = Object.entries(selectedFields)
+          .filter(([, value]) => value === true)
+          .map(([key]) => key as AgamaField)
+          .filter((key) => allowedFields.includes(key));
+
+        if (finalFields.length === 0) {
+          state.responses = true;
+          throw GqlError.forbidden();
+        }
+        sheet.addRow(finalFields);
+        list.forEach((row) => {
+          const values = finalFields.map((field) => row[field]);
+          sheet.addRow(values);
+        });
+
+        ExcelHelper.autoFitColumns(sheet);
+      }
+      let filename = ``;
+      if (!state.responses) {
+        try {
+          const folder = join(process.cwd(), 'storage');
+          if (!existsSync(folder)) {
+            mkdirSync(folder);
+          }
+
+          filename = `master_agama_${Date.now()}.xlsx`;
+          const filepath = join(folder, filename);
+
+          await workbook.xlsx.writeFile(filepath);
+        } catch (err) {
+          state.responses = true;
+          throw GqlError.badRequest(`Gagal membuat file`, err);
+        }
+      }
+
+      return `${process.env.BASE_URL}/storage/${filename}`;
+    } catch (err: unknown) {
+      state.responses = true;
+      if (err instanceof Error) {
+        throw GqlError.badRequest(err.message);
+      }
+
+      throw GqlError.badRequest('Proses generate excel gagal');
     }
-    // Field yang bisa diexport
-    const allowedFields = [
-      'id',
-      'nama_agama',
-      'created_at',
-      'updated_at',
-      'deleted_at',
-    ] as const;
-
-    type AgamaField = (typeof allowedFields)[number];
-
-    // Convert input {id: true, nama_agama: false, ...} → ["id"]
-    const finalFields = Object.entries(selectedFields)
-      .filter(([, value]) => value === true)
-      .map(([key]) => key as AgamaField)
-      .filter((key) => allowedFields.includes(key));
-
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet('Master Agama');
-    if (finalFields.length === 0) {
-      throw GqlError.custom(
-        `Internal Server Error`,
-        500,
-        'Tidak ada field yang dipilih untuk diexport',
-      );
-    }
-    // Header Excel
-    console.log(finalFields.length);
-    sheet.addRow(finalFields);
-
-    // Isi data
-    list.forEach((row) => {
-      const values = finalFields.map((field) => row[field]);
-      sheet.addRow(values);
-    });
-
-    // Folder storage
-    const folder = join(process.cwd(), 'storage');
-    if (!existsSync(folder)) mkdirSync(folder);
-
-    const filename = `master_agama_${Date.now()}.xlsx`;
-    const filepath = join(folder, filename);
-
-    await workbook.xlsx.writeFile(filepath);
-
-    return `${process.env.BASE_URL}/storage/${filename}`;
   }
 }

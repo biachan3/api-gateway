@@ -5,15 +5,33 @@ export class AgamaType {
   @Field(() => Int)
   id: number;
 
-  @Field()
+  @Field({ description: 'Nama Agama' })
   nama_agama: string;
 
-  @Field()
+  @Field({ description: 'Kapan data Agama ini masuk ke database' })
   created_at: Date;
 
-  @Field({ nullable: true })
+  @Field({
+    description: 'Kapan data Agama ini terakhir kali diupdate',
+    nullable: true,
+  })
   updated_at: Date;
 
-  @Field({ nullable: true })
+  @Field({
+    description: 'Kapan data Agama ini dihapus',
+    nullable: true,
+  })
   deleted_at: Date;
+}
+
+@ObjectType()
+export class AgamaResponse {
+  @Field(() => Int)
+  code: number;
+
+  @Field()
+  message: string;
+
+  @Field(() => [AgamaType])
+  data: AgamaType[];
 }

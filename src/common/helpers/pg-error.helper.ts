@@ -37,8 +37,15 @@ export class PgErrorHandler {
         return GqlError.internal('Syntax SQL tidak valid');
 
       // Undefined column
-      case '42703':
+      case '42703': {
+        const message = error.message || '';
+        const match = message.match(/column "(.+?)" does not exist/i);
+        const column = match ? match[1] : null;
+        if (column) {
+          return GqlError.internal(`Kolom '${column}' tidak ditemukan`);
+        }
         return GqlError.internal('Kolom tidak ditemukan');
+      }
 
       // Undefined table
       case '42P01':
