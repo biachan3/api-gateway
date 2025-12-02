@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AgamaEntity } from './agama.entity';
+import { AgamaEntity } from '../../entities/v2.1.1/agama.entity';
 import { AgamaService } from './agama.service';
 // import { AgamaResolver } from './agama.resolver';
 import { DatabaseModule } from '../../database/database.module';

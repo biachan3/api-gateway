@@ -1,8 +1,9 @@
 import { Resolver, Query, Args } from '@nestjs/graphql';
 import { AgamaService } from './agama.service';
-import { AgamaType, AgamaResponse } from './dto/agama_type';
+import { AgamaType } from './dto/agama_type';
 import { AgamaFieldsInput } from './dto/agama_fields_type';
 import { AgamaFilterInput } from './dto/agama_filter_type';
+import { AgamaListResponse } from './dto/agama_response_type';
 // import * as graphql from 'graphql';
 
 // function isFieldNode(node: graphql.SelectionNode): node is graphql.FieldNode {
@@ -22,7 +23,7 @@ import { AgamaFilterInput } from './dto/agama_filter_type';
 @Resolver(() => AgamaType)
 export class AgamaQueryResolver {
   constructor(private readonly service: AgamaService) {}
-  @Query(() => AgamaResponse, {
+  @Query(() => AgamaListResponse, {
     description: 'Menampilkan daftar agama',
   })
   async master_agama_daftar(
@@ -31,10 +32,10 @@ export class AgamaQueryResolver {
     @Args('limit', { type: () => Number, nullable: true }) limit?: number,
     @Args('filter', { type: () => AgamaFilterInput, nullable: true })
     filter?: AgamaFilterInput,
-  ): Promise<AgamaResponse> {
+  ): Promise<AgamaListResponse> {
     const data = await this.service.semua(clinic, page, limit, filter);
     return {
-      code: 200,
+      status: 200,
       message: 'OK',
       data: Array.isArray(data) ? data : [],
     };

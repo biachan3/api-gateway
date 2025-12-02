@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AgamaEntity } from './agama.entity';
+import { AgamaEntity } from '../../entities/v2.1.1/agama.entity';
 import { MultiConnectionService } from '../../database/multi_connection.service';
 import { GqlError } from '../../common/helpers/gql-error.helper';
 import { PgErrorHandler } from '../../common/helpers/pg-error.helper';

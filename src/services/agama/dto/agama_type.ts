@@ -27,11 +27,11 @@ export class AgamaType {
 @ObjectType()
 export class AgamaResponse {
   @Field(() => Int)
-  code: number;
+  status: number;
 
   @Field()
   message: string;
 
   @Field(() => [AgamaType])
-  data: AgamaType[];
+  data?: AgamaType;
 }

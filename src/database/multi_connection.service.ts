@@ -12,9 +12,9 @@ const connections: Record<string, DataSource> = {};
 // };
 
 const entitiesByVersion: Record<string, string[]> = {
-  '2.1.1': [__dirname + '/entities/v2.1.1/*.entity{.ts,.js}'],
-  '2.2.0': [__dirname + '/entities/v2.2.0/*.entity{.ts,.js}'],
-  '3.0.0': [__dirname + '/entities/v3.0.0/*.entity{.ts,.js}'],
+  '2.1.1': [__dirname + '../../entities/v2.1.1/*.entity{.ts,.js}'],
+  '2.2.0': [__dirname + '../../entities/v2.2.0/*.entity{.ts,.js}'],
+  '3.0.0': [__dirname + '../../entities/v3.0.0/*.entity{.ts,.js}'],
 };
 
 @Injectable()
@@ -35,7 +35,6 @@ export class MultiConnectionService {
       throw GqlError.notFound(`Clinic ${name} tidak ditemukan`);
     }
     const entities = entitiesByVersion[conf.version];
-
     const db = new DataSource({
       type: 'postgres',
       host: conf.host,
