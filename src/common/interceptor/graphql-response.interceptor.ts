@@ -1,26 +1,21 @@
+// common/interceptor/graphql-response.interceptor.ts
 import {
+  CallHandler,
+  ExecutionContext,
   Injectable,
   NestInterceptor,
-  ExecutionContext,
-  CallHandler,
 } from '@nestjs/common';
-import { Observable, map } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 @Injectable()
 export class GraphqlResponseInterceptor implements NestInterceptor {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(_ctx: ExecutionContext, next: CallHandler) {
     return next.handle().pipe(
-      map((data: unknown) => {
-        return {
-          data,
-          extensions: {
-            meta_data: {
-              status: 200,
-              message: 'OK',
-            },
-          },
-        };
-      }),
+      map((data) => ({
+        status: 200,
+        message: 'OK',
+        data: Array.isArray(data) ? data : [data ?? null],
+      })),
     );
   }
 }

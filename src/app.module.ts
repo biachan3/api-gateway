@@ -49,6 +49,7 @@ interface YogaErrorInfo {
     TypeOrmModule.forFeature([ConnectionEntity]),
     GraphQLModule.forRoot<YogaDriverConfig>({
       driver: YogaDriver,
+      path: '/dendy',
       autoSchemaFile: true,
       maskedErrors: false,
       introspection: true,

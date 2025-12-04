@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AgamaEntity } from '../../entities/v2.1.1/agama.entity';
+// import { AgamaEntity } from '../../entities/v2.1.1/agama.entity';
 import { MultiConnectionService } from '../../database/multi_connection.service';
 import { GqlError } from '../../common/helpers/gql-error.helper';
 import { PgErrorHandler } from '../../common/helpers/pg-error.helper';
@@ -10,17 +10,38 @@ import { join } from 'path';
 import { AgamaFieldsInput } from './dto/agama_fields_type';
 import { ExcelHelper } from '../../common/helpers/excel.helper';
 import { AgamaFilterInput } from './dto/agama_filter_type';
+import { AgamaType } from './dto/agama_type';
+// import { DataSource } from 'typeorm';
 @Injectable()
 export class AgamaService {
   constructor(private multi: MultiConnectionService) {}
+
+  private async repo(clinic: string) {
+    try {
+      const db = await this.multi.getConnection(clinic);
+      console.log(db);
+      // Pastikan entity metadata ada (entity terdaftar)
+      const meta = db.entityMetadatas.find((m) => m.tableName === 'agama');
+      if (!meta) {
+        throw new Error(
+          `Entity "agama" tidak ditemukan pada versi database ${clinic}`,
+        );
+      }
+
+      return db.getRepository('agama');
+    } catch (e: any) {
+      // Error jika tabel tidak ada
+      throw PgErrorHandler.handle(e);
+    }
+  }
 
   async semua(
     clinic: string,
     page?: number,
     limit?: number,
     filter?: AgamaFilterInput,
-  ): Promise<AgamaEntity[]> {
-    const db = await this.multi.getConnection(clinic);
+  ): Promise<AgamaType[]> {
+    const db = await this.repo(clinic);
     const state: { responses?: boolean } = {};
     let where = `WHERE deleted_at IS NULL`;
     const params: any[] = [];
@@ -68,9 +89,8 @@ export class AgamaService {
 
   async buat(clinic: string, nama_agama: string) {
     try {
-      const db = await this.multi.getConnection(clinic);
-      const repo = db.getRepository(AgamaEntity);
-
+      const repo = await this.repo(clinic);
+      // const repo = db.getRepository(AgamaEntity);
       const agama = repo.create({ nama_agama });
       return await repo.save(agama);
     } catch (err: unknown) {
@@ -80,8 +100,8 @@ export class AgamaService {
 
   async ubah(clinic: string, id: number, nama_agama: string) {
     try {
-      const db = await this.multi.getConnection(clinic);
-      const repo = db.getRepository(AgamaEntity);
+      const repo = await this.repo(clinic);
+      // const repo = db.getRepository(AgamaEntity);
       const agama = await repo.findOneBy({ id });
       if (agama) {
         agama.nama_agama = nama_agama;
@@ -103,8 +123,8 @@ export class AgamaService {
     }
   }
   async hapus(clinic: string, id: number) {
-    const db = await this.multi.getConnection(clinic);
-    const repo = db.getRepository(AgamaEntity);
+    const repo = await this.repo(clinic);
+    // const repo = db.getRepository(AgamaEntity);
     const agama = await repo.findOneBy({ id });
     if (!agama) {
       throw GqlError.notFound(`Agama dengan id ${id} tidak ditemukan`);
@@ -122,7 +142,7 @@ export class AgamaService {
     const state: { responses?: boolean } = {};
 
     try {
-      let list: AgamaEntity[] = [];
+      let list: AgamaType[] = [];
       if (!state.responses) {
         await this.semua(clinic)
           .then((res) => {
